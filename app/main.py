@@ -1,9 +1,10 @@
 #создать объект FastAPI
-#зарегистрировать health endpoint
+# подключить routers
 import logging
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
 
 from app.db.connection import check_database_connection
+from app.routers.cocktails import cocktails_router
 
 
 logging.basicConfig(
@@ -13,13 +14,12 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI
-
 app = FastAPI(
     title="Cocktail API",
     version="0.1.0",
     description="Read API for cocktail recipes"
 )
+app.include_router(cocktails_router)
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
