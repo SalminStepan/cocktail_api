@@ -1,6 +1,9 @@
 from app.db.connection import get_connection
-from app.repositories.cocktail_repository import get_cocktail_summaries
+from app.repositories.cocktail_repository import get_cocktail_summaries, get_ingredients_by_cocktail_id, get_cocktail_by_id
 from app.schemas.cocktail import CocktailSummary
+from app.schemas.ingredient import CocktailDetail, IngredientRead
+
+
 
 def get_cocktail_page(
     page: int = 1,
@@ -15,3 +18,20 @@ def get_cocktail_page(
             cocktail = CocktailSummary(**row)
             cocktails.append(cocktail)
         return cocktails
+
+def get_cocktail_detail(cocktail_id: int) -> CocktailDetail | None:
+    with get_connection() as conn:
+        cocktail_row = get_cocktail_by_id(conn, cocktail_id)
+        if cocktail_row is None:
+            return None
+        
+        ingredient_rows = get_ingredients_by_cocktail_id(conn, cocktail_id)
+        
+        ingredients_clean = []
+        for ing_row in ingredient_rows:
+            ingredient = IngredientRead(**ing_row)
+            ingredients_clean.append(ingredient)
+
+
+        cocktail = CocktailDetail(**cocktail_row, ingredients=ingredients_clean)
+        return cocktail
