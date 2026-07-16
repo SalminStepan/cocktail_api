@@ -58,3 +58,30 @@ def get_ingredients_by_cocktail_id(conn, cocktail_id: int) -> list[dict]:
             )
         ingredients = cur.fetchall()
         return ingredients
+    
+def search_cocktail_summaries(
+        conn, 
+        query: str,
+        limit: int,
+        offset: int
+) -> list[dict]:
+    with conn.cursor() as cur:
+        pattern = f"%{query}%"
+        cur.execute("""
+            SELECT DISTINCT
+                c.id,
+                c.name,
+                c.image_url,
+                c.glass,
+                c.parse_status
+            FROM cocktails AS c
+            LEFT JOIN ingredients AS i
+                ON i.cocktail_id = c.id
+            WHERE c.name ILIKE %s
+            OR i.name ILIKE %s
+            OR i.raw ILIKE %s
+            ORDER BY c.id
+            LIMIT %s
+            OFFSET %s;""", (pattern, pattern, pattern, limit, offset))
+        cocktails = cur.fetchall()
+        return cocktails

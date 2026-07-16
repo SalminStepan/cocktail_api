@@ -1,5 +1,5 @@
 from app.db.connection import get_connection
-from app.repositories.cocktail_repository import get_cocktail_summaries, get_ingredients_by_cocktail_id, get_cocktail_by_id
+from app.repositories.cocktail_repository import get_cocktail_summaries, get_ingredients_by_cocktail_id, get_cocktail_by_id, search_cocktail_summaries
 from app.schemas.cocktail import CocktailSummary
 from app.schemas.ingredient import CocktailDetail, IngredientRead
 
@@ -35,3 +35,20 @@ def get_cocktail_detail(cocktail_id: int) -> CocktailDetail | None:
 
         cocktail = CocktailDetail(**cocktail_row, ingredients=ingredients_clean)
         return cocktail
+
+def search_cocktails(
+    query: str,
+    page: int = 1,
+    page_size: int = 20,
+) -> list[CocktailSummary]:
+    query = " ".join(query.split())
+    limit = page_size
+    offset = (page - 1) * page_size
+    with get_connection() as conn:
+        rows = search_cocktail_summaries(conn, query, limit, offset)
+        cocktails = []
+        for row in rows:
+            cocktail = CocktailSummary(**row)
+            cocktails.append(cocktail)
+        return cocktails
+    
