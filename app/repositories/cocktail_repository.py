@@ -39,26 +39,6 @@ def get_cocktail_by_id(conn, cocktail_id :int) -> dict | None:
         cocktail = cur.fetchone()
         return cocktail
 
-def get_ingredients_by_cocktail_id(conn, cocktail_id: int) -> list[dict]:
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT
-                id,
-                position,
-                raw,
-                amount,
-                unit,
-                name,
-                comment,
-                unresolved
-            FROM ingredients
-            WHERE cocktail_id = %s
-            ORDER BY position;""", 
-            (cocktail_id,)
-            )
-        ingredients = cur.fetchall()
-        return ingredients
-    
 def search_cocktail_summaries(
         conn, 
         query: str,

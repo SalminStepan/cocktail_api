@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
-from app.services.cocktail_service import get_cocktail_page, get_cocktail_detail, search_cocktails
+from app.services.cocktail_service import (
+    get_cocktail_page, 
+    get_cocktail_detail, 
+    search_cocktails
+)
 from app.schemas.cocktail import CocktailSummary
 from app.schemas.ingredient import CocktailDetail
 

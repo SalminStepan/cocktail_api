@@ -23,3 +23,7 @@ class CocktailDetail(BaseModel):
     parse_status: str
     source_url: str | None
     ingredients: list[IngredientRead]
+
+class IngredientSearchResult(BaseModel):
+    name: str
+    cocktail_count: int

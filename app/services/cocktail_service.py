@@ -1,8 +1,15 @@
 from app.db.connection import get_connection
-from app.repositories.cocktail_repository import get_cocktail_summaries, get_ingredients_by_cocktail_id, get_cocktail_by_id, search_cocktail_summaries
+from app.repositories.cocktail_repository import (
+    get_cocktail_summaries,
+    get_cocktail_by_id, 
+    search_cocktail_summaries
+)
+from app.repositories.ingredient_repository import get_ingredients_by_cocktail_id
 from app.schemas.cocktail import CocktailSummary
-from app.schemas.ingredient import CocktailDetail, IngredientRead
-
+from app.schemas.ingredient import (
+    CocktailDetail,
+    IngredientRead,
+)
 
 
 def get_cocktail_page(
@@ -51,4 +58,3 @@ def search_cocktails(
             cocktail = CocktailSummary(**row)
             cocktails.append(cocktail)
         return cocktails
-    
