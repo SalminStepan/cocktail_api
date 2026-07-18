@@ -6,7 +6,7 @@ from app.services.cocktail_service import (
     get_cocktail_detail, 
     search_cocktails
 )
-from app.schemas.cocktail import CocktailSummary
+from app.schemas.cocktail import CocktailSummary, CocktailPage
 from app.schemas.ingredient import CocktailDetail
 
 
@@ -16,7 +16,7 @@ cocktails_router = APIRouter()
 def list_cocktails(
     page: int = Query(default=1, ge = 1),
     page_size: int = Query(default = 20, ge = 1, le = 100)
-) -> list[CocktailSummary]:
+) -> CocktailPage:
     cocktails = get_cocktail_page(page, page_size)
     return cocktails
 

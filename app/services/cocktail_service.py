@@ -1,11 +1,14 @@
+from math import ceil
+
 from app.db.connection import get_connection
 from app.repositories.cocktail_repository import (
     get_cocktail_summaries,
     get_cocktail_by_id, 
-    search_cocktail_summaries
+    search_cocktail_summaries,
+    count_cocktails
 )
 from app.repositories.ingredient_repository import get_ingredients_by_cocktail_id
-from app.schemas.cocktail import CocktailSummary
+from app.schemas.cocktail import CocktailSummary, CocktailPage
 from app.schemas.ingredient import (
     CocktailDetail,
     IngredientRead,
@@ -15,7 +18,7 @@ from app.schemas.ingredient import (
 def get_cocktail_page(
     page: int = 1,
     page_size: int = 20,
-) -> list[CocktailSummary]:
+) -> CocktailPage:
     limit = page_size
     offset = (page - 1) * page_size
     with get_connection() as conn:
@@ -24,7 +27,18 @@ def get_cocktail_page(
         for row in rows:
             cocktail = CocktailSummary(**row)
             cocktails.append(cocktail)
-        return cocktails
+
+        total_cocktails = count_cocktails(conn)
+        total_pages = ceil(total_cocktails / page_size)
+        cocktail_page = CocktailPage(
+            items = cocktails,
+            page = page,
+            page_size= page_size,
+            total = total_cocktails,
+            total_pages = total_pages
+        )
+
+        return cocktail_page
 
 def get_cocktail_detail(cocktail_id: int) -> CocktailDetail | None:
     with get_connection() as conn:

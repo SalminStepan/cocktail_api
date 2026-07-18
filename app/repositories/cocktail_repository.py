@@ -65,3 +65,11 @@ def search_cocktail_summaries(
             OFFSET %s;""", (pattern, pattern, pattern, limit, offset))
         cocktails = cur.fetchall()
         return cocktails
+
+def count_cocktails(conn) -> int:
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT COUNT(*) AS total
+            FROM cocktails;""")
+        total_cocktails = cur.fetchone()
+        return total_cocktails["total"]
