@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from app.db.connection import check_database_connection
 from app.routers.cocktails import cocktails_router
 from app.routers.ingredients import ingredients_router
-
+from app.routers.stats import stats_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,6 +22,7 @@ app = FastAPI(
 )
 app.include_router(cocktails_router)
 app.include_router(ingredients_router)
+app.include_router(stats_router)
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
