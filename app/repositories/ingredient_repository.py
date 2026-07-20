@@ -40,3 +40,15 @@ def search_ingredient_names(
             OFFSET %s;""", (pattern, limit, offset))
         counted_ingredients = cur.fetchall()
         return counted_ingredients
+
+def count_ingredient_search_results(conn, query: str) -> int:
+    with conn.cursor() as cur:
+        pattern = f"%{query}%"
+        cur.execute("""
+            SELECT COUNT(DISTINCT i.name) AS total
+            FROM ingredients AS i
+            WHERE i.name IS NOT NULL
+            AND i.unresolved = false
+            AND i.name ILIKE %s;""", (pattern,))
+        total = cur.fetchone()
+        return total["total"]

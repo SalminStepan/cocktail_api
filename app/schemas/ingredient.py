@@ -27,3 +27,11 @@ class CocktailDetail(BaseModel):
 class IngredientSearchResult(BaseModel):
     name: str
     cocktail_count: int
+
+class IngredientPage(BaseModel):
+    items: list[IngredientSearchResult]
+    page: int
+    page_size: int
+    total: int
+    total_pages: int
+
