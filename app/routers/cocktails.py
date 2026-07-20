@@ -25,7 +25,7 @@ def search_cocktails_endpoint(
     q: str = Query(min_length=3, max_length=100),
     page: int = Query(default=1, ge = 1),
     page_size: int = Query(default = 20, ge = 1, le = 100)
-) -> list[CocktailSummary]:
+) -> CocktailPage:
     cocktails = search_cocktails(q, page, page_size)
     return cocktails
     

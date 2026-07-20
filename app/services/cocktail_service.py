@@ -5,7 +5,8 @@ from app.repositories.cocktail_repository import (
     get_cocktail_summaries,
     get_cocktail_by_id, 
     search_cocktail_summaries,
-    count_cocktails
+    count_cocktails,
+    count_cocktail_search_results
 )
 from app.repositories.ingredient_repository import get_ingredients_by_cocktail_id
 from app.schemas.cocktail import CocktailSummary, CocktailPage
@@ -61,8 +62,16 @@ def search_cocktails(
     query: str,
     page: int = 1,
     page_size: int = 20,
-) -> list[CocktailSummary]:
+) -> CocktailPage:
     query = " ".join(query.split())
+    if not query:
+        return CocktailPage(
+            items=[],
+            page=page,
+            page_size=page_size,
+            total=0,
+            total_pages=0,
+        )
     limit = page_size
     offset = (page - 1) * page_size
     with get_connection() as conn:
@@ -71,4 +80,16 @@ def search_cocktails(
         for row in rows:
             cocktail = CocktailSummary(**row)
             cocktails.append(cocktail)
-        return cocktails
+
+        total_cocktails = count_cocktail_search_results(conn, query)
+        total_pages = ceil(total_cocktails / page_size)
+        
+        cocktail_page = CocktailPage(
+            items = cocktails,
+            page = page,
+            page_size= page_size,
+            total = total_cocktails,
+            total_pages = total_pages
+        )
+
+        return cocktail_page

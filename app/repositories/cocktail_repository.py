@@ -73,3 +73,18 @@ def count_cocktails(conn) -> int:
             FROM cocktails;""")
         total_cocktails = cur.fetchone()
         return total_cocktails["total"]
+
+def count_cocktail_search_results(conn, query: str) -> int:
+    with conn.cursor() as cur:
+        pattern = f"%{query}%"
+        cur.execute("""
+            SELECT COUNT(DISTINCT c.id) AS total
+            FROM cocktails AS c
+            LEFT JOIN ingredients AS i
+                ON i.cocktail_id = c.id
+            WHERE
+                c.name ILIKE %s
+                OR i.name ILIKE %s
+                OR i.raw ILIKE %s;""", (pattern, pattern, pattern))
+        row = cur.fetchone()
+        return row["total"]
