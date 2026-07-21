@@ -2,7 +2,9 @@
 
 A read-only REST API for browsing and searching a cocktail recipe dataset.
 
-The application is built with FastAPI, uses PostgreSQL for storage, and returns validated JSON responses through Pydantic schemas. The database is populated by a separate ETL pipeline that scrapes, normalizes, validates, and imports cocktail recipes.
+The application is built with FastAPI, uses PostgreSQL for storage, and returns validated JSON responses through Pydantic schemas.
+
+The database is populated by a separate ETL pipeline that scrapes, normalizes, validates, and imports cocktail recipes.
 
 ## Features
 
@@ -15,6 +17,7 @@ The application is built with FastAPI, uses PostgreSQL for storage, and returns 
 - Validated request parameters and response schemas
 - Sanitized `503 Service Unavailable` responses
 - Automated API and service tests
+- Dockerized application environment
 
 ## Dataset
 
@@ -42,19 +45,28 @@ GET /stats
 - PostgreSQL
 - psycopg 3
 - Pydantic
+- Uvicorn
 - pytest
 - HTTPX
-- Uvicorn
+- Docker
 
 ## Requirements
 
+The API requires access to a populated PostgreSQL database containing the `cocktails` and `ingredients` tables.
+
+The repository does not include database migrations or seed data. Database extraction, normalization, validation, and import are handled by a separate ETL project.
+
+### Local development
+
 - Python 3.12+
-- PostgreSQL
-- A populated database containing the `cocktails` and `ingredients` tables
+- Access to PostgreSQL
 
-The repository currently does not include database migrations or seed data. The database is populated by a separate ETL project.
+### Docker
 
-## Setup
+- Docker Engine
+- Access to PostgreSQL from the container
+
+## Local Setup
 
 Clone the repository and enter the project directory:
 
@@ -70,17 +82,24 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-Install the project:
+Upgrade `pip`:
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -e .
 ```
 
-Install the test dependency if it is not included in the project configuration:
+Install the application and test dependencies:
 
 ```bash
-python -m pip install pytest
+python -m pip install -e ".[test]"
+```
+
+The project dependencies are defined in `pyproject.toml`.
+
+Production dependencies can be installed without the test extras:
+
+```bash
+python -m pip install .
 ```
 
 ## Environment Configuration
@@ -91,7 +110,7 @@ Copy the example environment file:
 cp .env.example .env
 ```
 
-Configure the PostgreSQL connection in `.env`:
+Configure the PostgreSQL connection:
 
 ```dotenv
 DB_HOST=localhost
@@ -101,11 +120,31 @@ DB_USER=postgres
 DB_PASSWORD=your_password
 ```
 
-The `.env` file is ignored by Git and must not be committed.
+The `.env` file is ignored by both Git and Docker build context. It must not be committed or copied into the Docker image.
 
-## Running the API
+The database may be:
 
-Start the development server:
+- running locally;
+- available through an SSH tunnel;
+- running on a remote server;
+- running on the same VPS as the deployed API.
+
+## Running Locally
+
+Start the FastAPI development server:
+
+```bash
+fastapi dev
+```
+
+The FastAPI CLI entrypoint is configured in `pyproject.toml`:
+
+```toml
+[tool.fastapi]
+entrypoint = "app.main:app"
+```
+
+The application can also be started directly through Uvicorn:
 
 ```bash
 uvicorn app.main:app --reload
@@ -117,11 +156,192 @@ The API will be available at:
 http://127.0.0.1:8000
 ```
 
-Interactive API documentation is generated automatically:
+Interactive API documentation:
 
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
 - OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
+
+## Running with Docker
+
+### Build the image
+
+Build a versioned Docker image from the project root:
+
+```bash
+docker build -t cocktail-api:0.1.0 .
+```
+
+The Docker image contains:
+
+- Python 3.12
+- application source code
+- production dependencies from `pyproject.toml`
+- Uvicorn startup command
+
+The image does not contain:
+
+- `.env`
+- database credentials
+- local virtual environments
+- Git history
+- pytest cache
+- test files
+
+### Run with a directly accessible database
+
+When `DB_HOST` contains a reachable database hostname or IP address:
+
+```bash
+docker run -d \
+  --name cocktail-api \
+  --env-file .env \
+  -p 8000:8000 \
+  cocktail-api:0.1.0
+```
+
+Port mapping:
+
+```text
+localhost:8000
+        ↓
+container:8000
+        ↓
+Uvicorn
+        ↓
+FastAPI
+```
+
+The API will be available at:
+
+```text
+http://localhost:8000
+```
+
+### Run with a local SSH tunnel on Linux
+
+A common development setup is:
+
+```text
+FastAPI
+    ↓
+localhost:5432
+    ↓
+SSH tunnel
+    ↓
+PostgreSQL on VPS
+```
+
+Inside a regular Docker container, `localhost` refers to the container itself, not to the host machine.
+
+When `.env` contains:
+
+```dotenv
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+and PostgreSQL is reached through an SSH tunnel opened on the Linux host, run the container with host networking:
+
+```bash
+docker run -d \
+  --name cocktail-api \
+  --network host \
+  --env-file .env \
+  cocktail-api:0.1.0
+```
+
+Port publishing with `-p` is not required when `--network host` is used.
+
+The API remains available at:
+
+```text
+http://localhost:8000
+```
+
+### Verify the container
+
+Check running containers:
+
+```bash
+docker ps
+```
+
+View application logs:
+
+```bash
+docker logs cocktail-api
+```
+
+Follow logs in real time:
+
+```bash
+docker logs -f cocktail-api
+```
+
+Check application health:
+
+```bash
+curl "http://localhost:8000/health"
+```
+
+Check database connectivity:
+
+```bash
+curl "http://localhost:8000/health/db"
+```
+
+Expected database health response:
+
+```json
+{
+  "status": "ok",
+  "database": "ok"
+}
+```
+
+### Container lifecycle
+
+Stop the container:
+
+```bash
+docker stop cocktail-api
+```
+
+Start the existing container again:
+
+```bash
+docker start cocktail-api
+```
+
+Remove the stopped container:
+
+```bash
+docker rm cocktail-api
+```
+
+Removing a container does not remove its image.
+
+List local images:
+
+```bash
+docker image ls
+```
+
+After changing the application code, rebuild the image and recreate the container:
+
+```bash
+docker build -t cocktail-api:0.1.1 .
+
+docker stop cocktail-api
+docker rm cocktail-api
+
+docker run -d \
+  --name cocktail-api \
+  --network host \
+  --env-file .env \
+  cocktail-api:0.1.1
+```
 
 ## Endpoints
 
@@ -174,7 +394,7 @@ A page outside the available range is not treated as an error. It returns `200 O
 
 ## Cocktail Search
 
-Searches cocktail names and ingredient text:
+Search cocktail names and ingredient text:
 
 ```bash
 curl "http://127.0.0.1:8000/cocktails/search?q=gin&page=1&page_size=5"
@@ -325,6 +545,8 @@ Application health:
 curl "http://127.0.0.1:8000/health"
 ```
 
+Expected response:
+
 ```json
 {
   "status": "ok"
@@ -335,6 +557,15 @@ Database health:
 
 ```bash
 curl "http://127.0.0.1:8000/health/db"
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "database": "ok"
+}
 ```
 
 The application health endpoint does not depend on PostgreSQL. It remains available even when the database is offline.
@@ -373,7 +604,9 @@ If PostgreSQL is unavailable, database-backed endpoints return:
 }
 ```
 
-Internal psycopg errors, connection parameters, and database credentials are not exposed in HTTP responses. Full diagnostic information is written to the server logs.
+Internal psycopg errors, connection parameters, and database credentials are not exposed in HTTP responses.
+
+Full diagnostic information is written to the application logs.
 
 ## Architecture
 
@@ -406,40 +639,46 @@ Responsibilities are separated as follows:
 ## Project Structure
 
 ```text
-app/
-├── __init__.py
-├── main.py                  # FastAPI application and exception handlers
-├── config.py                # Environment-based database configuration
-├── exceptions.py            # Application-specific exceptions
-├── db/
+cocktail_api/
+├── app/
 │   ├── __init__.py
-│   └── connection.py        # PostgreSQL connection management
-├── repositories/
+│   ├── main.py                  # FastAPI application and exception handlers
+│   ├── config.py                # Environment-based database configuration
+│   ├── exceptions.py            # Application-specific exceptions
+│   ├── db/
+│   │   ├── __init__.py
+│   │   └── connection.py        # PostgreSQL connection management
+│   ├── repositories/
+│   │   ├── __init__.py
+│   │   ├── cocktail_repository.py
+│   │   ├── ingredient_repository.py
+│   │   └── stats_repository.py
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   ├── cocktails.py
+│   │   ├── ingredients.py
+│   │   └── stats.py
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   ├── cocktail.py
+│   │   ├── ingredient.py
+│   │   └── stats.py
+│   └── services/
+│       ├── __init__.py
+│       ├── cocktail_service.py
+│       ├── ingredient_service.py
+│       └── stats_service.py
+├── tests/
 │   ├── __init__.py
-│   ├── cocktail_repository.py
-│   ├── ingredient_repository.py
-│   └── stats_repository.py
-├── routers/
-│   ├── __init__.py
-│   ├── cocktails.py
-│   ├── ingredients.py
-│   └── stats.py
-├── schemas/
-│   ├── __init__.py
-│   ├── cocktail.py
-│   ├── ingredient.py
-│   └── stats.py
-└── services/
-    ├── __init__.py
-    ├── cocktail_service.py
-    ├── ingredient_service.py
-    └── stats_service.py
-
-tests/
-├── __init__.py
-├── conftest.py              # Shared pytest fixtures
-├── services/                # Service unit tests
-└── test_*.py                # HTTP contract and error-handling tests
+│   ├── conftest.py              # Shared pytest fixtures
+│   ├── services/                # Service unit tests
+│   └── test_*.py                # HTTP contract and error-handling tests
+├── .dockerignore
+├── .env.example
+├── .gitignore
+├── Dockerfile
+├── pyproject.toml
+└── README.md
 ```
 
 ## Tests
@@ -466,9 +705,22 @@ The project currently includes **56 automated tests** covering:
 - Sanitized error responses
 - Service-layer logic
 
-The current test suite does not require a live PostgreSQL instance. Database-dependent behavior is isolated with pytest fixtures and monkeypatching, so tests do not read from or modify the production database.
+The current test suite does not require a live PostgreSQL instance.
+
+Database-dependent behavior is isolated with pytest fixtures and monkeypatching, so tests do not read from or modify the production database.
 
 Repository integration tests against a dedicated test PostgreSQL instance are planned for a later stage.
+
+## Docker Status
+
+The API has been successfully:
+
+- packaged through `pyproject.toml`;
+- built as a Docker image;
+- started as a Docker container;
+- configured through an external `.env` file;
+- connected to PostgreSQL through an SSH tunnel;
+- verified through `/health`, `/health/db`, `/cocktails`, and `/stats`.
 
 ## Current Limitations
 
@@ -477,16 +729,17 @@ Repository integration tests against a dedicated test PostgreSQL instance are pl
 - No seed data
 - No authentication or authorization
 - No write endpoints
-- No Docker configuration yet
-- No repository integration tests yet
-- No CI workflow yet
+- No repository integration tests
+- No CI workflow
+- No public production deployment yet
 
 ## Roadmap
 
-- Dockerize the API and PostgreSQL environment
+- Deploy the Dockerized API to a VPS
+- Configure production container restart policy
+- Add reverse proxy and HTTPS
 - Add repository integration tests
 - Add GitHub Actions CI
-- Deploy the API to a VPS
 - Move the Telegram bot from direct PostgreSQL access to HTTP API calls
 - Add semantic search with pgvector
 - Add a retrieval-augmented `/ask` endpoint
