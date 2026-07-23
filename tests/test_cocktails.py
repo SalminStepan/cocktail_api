@@ -183,3 +183,43 @@ def test_cocktail_detail_returns_404(client, monkeypatch):
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Cocktail not found"}
+
+def test_cocktail_by_name_returns_cocktail(
+    client,
+    monkeypatch,
+    cocktail_detail,
+):
+    received = {}
+
+    def fake_get_by_name(name: str):
+        received["name"] = name
+        return cocktail_detail
+
+    monkeypatch.setattr(
+        "app.routers.cocktails.get_cocktail_detail_by_name",
+        fake_get_by_name,
+    )
+
+    response = client.get(
+        "/cocktails/by-name",
+        params={"name": "Gin Tonic"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == cocktail_detail
+    assert received["name"] == "Gin Tonic"
+
+
+def test_cocktail_by_name_returns_404(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.routers.cocktails.get_cocktail_detail_by_name",
+        lambda name: None,
+    )
+
+    response = client.get(
+        "/cocktails/by-name",
+        params={"name": "Missing Cocktail"},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Cocktail not found"}

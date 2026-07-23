@@ -6,7 +6,8 @@ from app.repositories.cocktail_repository import (
     get_cocktail_by_id, 
     search_cocktail_summaries,
     count_cocktails,
-    count_cocktail_search_results
+    count_cocktail_search_results,
+    get_cocktail_by_name
 )
 from app.repositories.ingredient_repository import get_ingredients_by_cocktail_id
 from app.schemas.cocktail import CocktailSummary, CocktailPage
@@ -93,3 +94,23 @@ def search_cocktails(
         )
 
         return cocktail_page
+
+def get_cocktail_detail_by_name(name: str) -> CocktailDetail | None:
+    name = " ".join(name.split())
+
+    with get_connection() as conn:
+        cocktail_row = get_cocktail_by_name(conn, name)
+
+        if cocktail_row is None:
+            return None
+
+        ingredient_rows = get_ingredients_by_cocktail_id(conn, cocktail_row["id"])
+
+        ingredients_clean = []
+        for ingredient_row in ingredient_rows:
+            ingredient = IngredientRead(**ingredient_row)
+            ingredients_clean.append(ingredient)
+
+        cocktail = CocktailDetail(**cocktail_row, ingredients=ingredients_clean)
+
+        return cocktail

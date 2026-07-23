@@ -88,3 +88,19 @@ def count_cocktail_search_results(conn, query: str) -> int:
                 OR i.raw ILIKE %s;""", (pattern, pattern, pattern))
         row = cur.fetchone()
         return row["total"]
+
+def get_cocktail_by_name(conn, name: str) -> dict | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, name, description, image_url, glass, garnish, method, parse_status, source_url
+            FROM cocktails
+            WHERE name ILIKE %s
+            ORDER BY id
+            LIMIT 1;
+            """,
+            (name,)
+        )
+        result = cur.fetchone()
+        return result
+        

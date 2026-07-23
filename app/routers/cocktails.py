@@ -4,9 +4,10 @@ from fastapi import HTTPException
 from app.services.cocktail_service import (
     get_cocktail_page, 
     get_cocktail_detail, 
-    search_cocktails
+    search_cocktails,
+    get_cocktail_detail_by_name
 )
-from app.schemas.cocktail import CocktailSummary, CocktailPage
+from app.schemas.cocktail import CocktailPage
 from app.schemas.ingredient import CocktailDetail
 
 
@@ -28,6 +29,20 @@ def search_cocktails_endpoint(
 ) -> CocktailPage:
     cocktails = search_cocktails(q, page, page_size)
     return cocktails
+
+@cocktails_router.get("/cocktails/by-name")
+def get_cocktail_by_name_endpoint(
+    name: str = Query(min_length=1, max_length=200)
+) -> CocktailDetail:
+    cocktail = get_cocktail_detail_by_name(name)
+
+    if cocktail is None:
+        raise HTTPException(
+            status_code=404, 
+            detail="Cocktail not found"
+        )
+    
+    return cocktail
     
 @cocktails_router.get("/cocktails/{cocktail_id}")
 def get_cocktail(cocktail_id: int) -> CocktailDetail:
