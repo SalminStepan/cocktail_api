@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
 from app.services.cocktail_service import (
-    get_cocktail_page, 
+    get_cocktail_page_orm, 
     get_cocktail_detail, 
     search_cocktails,
     get_cocktail_detail_by_name
@@ -18,7 +18,7 @@ def list_cocktails(
     page: int = Query(default=1, ge = 1),
     page_size: int = Query(default = 20, ge = 1, le = 100)
 ) -> CocktailPage:
-    cocktails = get_cocktail_page(page, page_size)
+    cocktails = get_cocktail_page_orm(page, page_size)
     return cocktails
 
 @cocktails_router.get("/cocktails/search")

@@ -1,3 +1,9 @@
+from sqlalchemy import select, func
+from sqlalchemy.orm import Session
+
+from app.db.models import Cocktail
+
+
 def get_cocktail_summaries(
     conn,
     limit: int,
@@ -18,7 +24,24 @@ def get_cocktail_summaries(
         )
         cocktails = cur.fetchall()
         return cocktails
-    
+
+
+def get_cocktail_summaries_orm(
+    session: Session,
+    limit: int,
+    offset: int,
+) -> list[Cocktail]:
+    stmt = (
+        select(Cocktail)
+        .order_by(Cocktail.id)
+        .limit(limit)
+        .offset(offset)
+    )
+
+    res = session.execute(stmt)
+    cocktails = res.scalars().all()
+    return cocktails
+
 def get_cocktail_by_id(conn, cocktail_id :int) -> dict | None:
     with conn.cursor() as cur:
         cur.execute("""
@@ -73,6 +96,10 @@ def count_cocktails(conn) -> int:
             FROM cocktails;""")
         total_cocktails = cur.fetchone()
         return total_cocktails["total"]
+
+def count_cocktails_orm(session: Session) -> int:
+    stmt = select(func.count()).select_from(Cocktail)
+    return session.execute(stmt).scalar_one()
 
 def count_cocktail_search_results(conn, query: str) -> int:
     with conn.cursor() as cur:
