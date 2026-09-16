@@ -3,7 +3,7 @@ from fastapi import HTTPException
 
 from app.services.cocktail_service import (
     get_cocktail_page_orm, 
-    get_cocktail_detail, 
+    get_cocktail_detail_orm, 
     search_cocktails,
     get_cocktail_detail_by_name
 )
@@ -46,7 +46,7 @@ def get_cocktail_by_name_endpoint(
     
 @cocktails_router.get("/cocktails/{cocktail_id}")
 def get_cocktail(cocktail_id: int) -> CocktailDetail:
-    cocktail = get_cocktail_detail(cocktail_id)
+    cocktail = get_cocktail_detail_orm(cocktail_id)
 
     if cocktail is None:
         raise HTTPException(status_code=404, detail="Cocktail not found")

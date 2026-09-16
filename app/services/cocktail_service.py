@@ -9,7 +9,8 @@ from app.repositories.cocktail_repository import (
     count_cocktail_search_results,
     get_cocktail_by_name,
     get_cocktail_summaries_orm,
-    count_cocktails_orm
+    count_cocktails_orm,
+    get_cocktail_by_id_orm
 )
 from app.repositories.ingredient_repository import get_ingredients_by_cocktail_id
 from app.schemas.cocktail import CocktailSummary, CocktailPage
@@ -92,6 +93,41 @@ def get_cocktail_detail(cocktail_id: int) -> CocktailDetail | None:
 
 
         cocktail = CocktailDetail(**cocktail_row, ingredients=ingredients_clean)
+        return cocktail
+
+def get_cocktail_detail_orm(cocktail_id: int) -> CocktailDetail | None:
+    with SessionLocal() as session:
+        row = get_cocktail_by_id_orm(session, cocktail_id)
+        if row is None:
+            return None
+
+        ingredients = []
+        for ingredient in row.ingredients:
+            ingredient_read = IngredientRead(
+                id=ingredient.id,
+                position=ingredient.position,
+                raw=ingredient.raw,
+                amount=ingredient.amount,
+                unit=ingredient.unit,
+                name=ingredient.name,
+                comment=ingredient.comment,
+                unresolved=ingredient.unresolved,
+            )
+            ingredients.append(ingredient_read)
+        
+
+        cocktail = CocktailDetail(    
+            id=row.id,
+            name=row.name,
+            description=row.description,
+            image_url=row.image_url,
+            glass=row.glass,
+            garnish=row.garnish,
+            method=row.method,
+            parse_status=row.parse_status,
+            source_url=row.source_url,
+            ingredients=ingredients,
+            )
         return cocktail
 
 def search_cocktails(

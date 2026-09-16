@@ -47,7 +47,8 @@ class Cocktail(Base):
         nullable=False,
     )
     ingredients: Mapped[list["Ingredient"]] = relationship(
-        back_populates="cocktail"
+        back_populates="cocktail",
+        order_by="Ingredient.position"
         )
 
 

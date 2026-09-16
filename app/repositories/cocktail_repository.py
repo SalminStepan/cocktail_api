@@ -1,5 +1,5 @@
 from sqlalchemy import select, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.db.models import Cocktail
 
@@ -61,6 +61,15 @@ def get_cocktail_by_id(conn, cocktail_id :int) -> dict | None:
             )
         cocktail = cur.fetchone()
         return cocktail
+
+def get_cocktail_by_id_orm(session: Session, cocktail_id:int) -> Cocktail | None:
+    stmt = (
+        select(Cocktail)
+        .where(Cocktail.id == cocktail_id)
+        .options(selectinload(Cocktail.ingredients))
+        )
+
+    return (session.execute(stmt)).scalar_one_or_none()
 
 def search_cocktail_summaries(
         conn, 
