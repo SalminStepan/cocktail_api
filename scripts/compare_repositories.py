@@ -18,14 +18,24 @@ from app.services.cocktail_service import (
     search_cocktails_orm,
     search_cocktails
 )
+
+from app.repositories.ingredient_repository import (
+    search_ingredient_names_orm,
+    search_ingredient_names,
+    count_ingredient_search_results,
+    count_ingredient_search_results_orm
+)
+
+from app.services.ingredient_service import search_ingredients, search_ingredients_orm
+
 from app.db.session import SessionLocal
 
 limit = 5
 offset =0 
 # query = "rum"
 # query = "gin"
-# query = "lime"
-query = "zzzzzzzz"
+query = "lime"
+# query = "zzzzzzzz"
 
 # with get_connection() as conn:
 #     old_cocktails = get_cocktail_summaries(conn, limit, offset)
@@ -107,7 +117,40 @@ query = "zzzzzzzz"
 # print(old_count_search, new_count_search)
 
 
-old = search_cocktails("rum", page=1, page_size=5)
-new = search_cocktails_orm("rum", page=1, page_size=5)
+# old = search_cocktails("rum", page=1, page_size=5)
+# new = search_cocktails_orm("rum", page=1, page_size=5)
+
+# print(old.model_dump() == new.model_dump())
+
+
+# with SessionLocal() as session:
+#     new = search_ingredient_names_orm(session, query, limit, offset)
+
+#     new_data = [
+#         (row.name, row.cocktail_count)
+#         for row in new
+#     ]
+# with get_connection() as conn:
+#     old = search_ingredient_names(conn, query, limit, offset)
+#     old_data = [
+#         (row["name"], row["cocktail_count"])
+#         for row in old
+#     ]
+
+# print(old_data == new_data)
+
+# with get_connection() as conn:
+#     old_count = count_ingredient_search_results(conn, "lime")
+
+# with SessionLocal() as session:
+#     new_count = count_ingredient_search_results_orm(session, "lime")
+
+# print(old_count)
+# print(new_count)
+# print(old_count == new_count)
+
+
+old = search_ingredients("lime", page=1, page_size=5)
+new = search_ingredients_orm("lime", page=1, page_size=5)
 
 print(old.model_dump() == new.model_dump())

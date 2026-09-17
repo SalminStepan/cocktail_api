@@ -7,8 +7,17 @@ from app.repositories.cocktail_repository import (
     get_cocktail_summaries,
     get_cocktail_by_id_orm,
     search_cocktail_summaries_orm,
+
+)
+from app.repositories.ingredient_repository import (
+    search_ingredient_names_orm,
+    search_ingredient_names,
 )
 
+
+query = "rum"
+limit = 10
+offset = 0
 
 # with SessionLocal() as session:
 #     stmt = select(Cocktail).limit(3)
@@ -46,12 +55,14 @@ from app.repositories.cocktail_repository import (
 #     print(cocktail.id)
 #     print(cocktail.name)
 
-query = "rum"
-limit = 10
-offset = 0
+
+
+# with SessionLocal() as session:
+#     res = search_cocktail_summaries_orm(session, query, limit, offset)
+
+#     for r in res:
+#         print(r.name)
 
 with SessionLocal() as session:
-    res = search_cocktail_summaries_orm(session, query, limit, offset)
-
-    for r in res:
-        print(r.name)
+    res = search_ingredient_names_orm(session, query, limit, offset)
+    print(res)
