@@ -3,7 +3,11 @@ from sqlalchemy.orm import selectinload
 
 from app.db.session import SessionLocal
 from app.db.models import Cocktail
-from app.repositories.cocktail_repository import get_cocktail_summaries, get_cocktail_by_id_orm
+from app.repositories.cocktail_repository import (
+    get_cocktail_summaries,
+    get_cocktail_by_id_orm,
+    search_cocktail_summaries_orm,
+)
 
 
 # with SessionLocal() as session:
@@ -36,9 +40,18 @@ from app.repositories.cocktail_repository import get_cocktail_summaries, get_coc
 #     for cocktail in cocktails:
 #         print(cocktail.id, cocktail.name)
 
+# with SessionLocal() as session:
+#     cocktail = get_cocktail_by_id_orm(session, cocktail_id=36843)
+
+#     print(cocktail.id)
+#     print(cocktail.name)
+
+query = "rum"
+limit = 10
+offset = 0
+
 with SessionLocal() as session:
-    cocktail = get_cocktail_by_id_orm(session, cocktail_id=36843)
+    res = search_cocktail_summaries_orm(session, query, limit, offset)
 
-    print(cocktail.id)
-    print(cocktail.name)
-
+    for r in res:
+        print(r.name)

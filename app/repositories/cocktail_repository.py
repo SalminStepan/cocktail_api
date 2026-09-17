@@ -1,7 +1,12 @@
-from sqlalchemy import select, func
+from sqlalchemy import (
+    select,
+    or_,
+    func,
+    distinct
+)
 from sqlalchemy.orm import Session, selectinload
 
-from app.db.models import Cocktail
+from app.db.models import Cocktail, Ingredient
 
 
 def get_cocktail_summaries(
@@ -72,10 +77,10 @@ def get_cocktail_by_id_orm(session: Session, cocktail_id:int) -> Cocktail | None
     return (session.execute(stmt)).scalar_one_or_none()
 
 def search_cocktail_summaries(
-        conn, 
-        query: str,
-        limit: int,
-        offset: int
+    conn, 
+    query: str,
+    limit: int,
+    offset: int,
 ) -> list[dict]:
     with conn.cursor() as cur:
         pattern = f"%{query}%"
@@ -97,6 +102,33 @@ def search_cocktail_summaries(
             OFFSET %s;""", (pattern, pattern, pattern, limit, offset))
         cocktails = cur.fetchall()
         return cocktails
+
+def search_cocktail_summaries_orm(
+    session: Session,
+    query: str,
+    limit: int,
+    offset: int,
+) -> list[Cocktail]:
+    pattern = f"%{query}%"
+    stmt = (
+        select(Cocktail)
+        .outerjoin(Cocktail.ingredients)
+        .where(
+        or_(
+            Cocktail.name.ilike(pattern),
+            Ingredient.name.ilike(pattern),
+            Ingredient.raw.ilike(pattern),
+            )
+        )
+        .distinct()
+        .order_by(Cocktail.id)
+        .limit(limit)
+        .offset(offset)
+        )
+    
+    res = session.execute(stmt)
+    cocktails = res.scalars().all()
+    return cocktails
 
 def count_cocktails(conn) -> int:
     with conn.cursor() as cur:
@@ -124,6 +156,25 @@ def count_cocktail_search_results(conn, query: str) -> int:
                 OR i.raw ILIKE %s;""", (pattern, pattern, pattern))
         row = cur.fetchone()
         return row["total"]
+
+def count_cocktail_search_results_orm(
+    session: Session,
+    query: str
+    ) -> int:
+    pattern = f"%{query}%"
+    stmt = (
+        select(func.count(distinct(Cocktail.id)))
+        .outerjoin(Cocktail.ingredients)
+        .where(
+        or_(
+            Cocktail.name.ilike(pattern),
+            Ingredient.name.ilike(pattern),
+            Ingredient.raw.ilike(pattern),
+            )
+        )
+    )
+    
+    return session.execute(stmt).scalar_one()
 
 def get_cocktail_by_name(conn, name: str) -> dict | None:
     with conn.cursor() as cur:

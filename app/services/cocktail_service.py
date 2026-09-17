@@ -10,7 +10,9 @@ from app.repositories.cocktail_repository import (
     get_cocktail_by_name,
     get_cocktail_summaries_orm,
     count_cocktails_orm,
-    get_cocktail_by_id_orm
+    get_cocktail_by_id_orm,
+    search_cocktail_summaries_orm,
+    count_cocktail_search_results_orm
 )
 from app.repositories.ingredient_repository import get_ingredients_by_cocktail_id
 from app.schemas.cocktail import CocktailSummary, CocktailPage
@@ -165,6 +167,48 @@ def search_cocktails(
         )
 
         return cocktail_page
+
+def search_cocktails_orm(
+    query: str,
+    page: int = 1,
+    page_size: int = 20
+    ) -> CocktailPage:
+    query = " ".join(query.split())
+    if not query:
+        return CocktailPage(
+            items=[],
+            page=page,
+            page_size=page_size,
+            total=0,
+            total_pages=0,
+        )
+    limit = page_size
+    offset = (page - 1) * page_size
+
+    with SessionLocal() as session:
+        rows = search_cocktail_summaries_orm(session, query, limit, offset)
+        cocktails = []
+        for row in rows:
+            cocktail = CocktailSummary(
+                id=row.id,
+                name=row.name,
+                image_url=row.image_url,
+                glass=row.glass,
+                parse_status=row.parse_status
+            )
+            cocktails.append(cocktail)
+
+        total_cocktails = count_cocktail_search_results_orm(session, query)
+        total_pages = ceil(total_cocktails / page_size)
+        cocktail_page = CocktailPage(
+            items=cocktails,
+            page=page,
+            page_size=page_size,
+            total=total_cocktails,
+            total_pages=total_pages
+        )
+        return cocktail_page
+
 
 def get_cocktail_detail_by_name(name: str) -> CocktailDetail | None:
     name = " ".join(name.split())
