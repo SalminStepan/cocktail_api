@@ -8,6 +8,7 @@ from sqlalchemy import (
     Numeric,
     DateTime,
     UniqueConstraint,
+    Text,
     func,
     false,
 )
@@ -26,16 +27,16 @@ class Cocktail(Base):
         ),
     )
 
-    id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
-    source: Mapped[str] = mapped_column(nullable=False) 
-    source_url: Mapped[str] = mapped_column(unique=True, nullable=False)
-    name: Mapped[str] = mapped_column(nullable=False)
-    description: Mapped[str | None] = mapped_column(nullable=True)
-    image_url: Mapped[str | None] = mapped_column(nullable=True)
-    glass: Mapped[str | None] = mapped_column(nullable=True)
-    garnish: Mapped[str | None] = mapped_column(nullable=True)
-    method: Mapped[str | None] = mapped_column(nullable=True)
-    parse_status: Mapped[str] = mapped_column(nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False) 
+    source_url: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    glass: Mapped[str | None] = mapped_column(Text, nullable=True)
+    garnish: Mapped[str | None] = mapped_column(Text, nullable=True)
+    method: Mapped[str | None] = mapped_column(Text, nullable=True)
+    parse_status: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -67,18 +68,18 @@ class Ingredient(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     cocktail_id: Mapped[int] =  mapped_column(
         BigInteger,
-        ForeignKey('cocktails.id'),
+        ForeignKey('cocktails.id', ondelete="CASCADE"),
         nullable=False
     )
     position: Mapped[int] = mapped_column(nullable=False)
-    raw: Mapped[str] = mapped_column(nullable=False)
+    raw: Mapped[str] = mapped_column(Text, nullable=False)
     amount: Mapped[Decimal | None] = mapped_column(
         Numeric,
         nullable=True,
     )
-    unit: Mapped[str | None] = mapped_column(nullable=True)
-    name: Mapped[str | None] = mapped_column(nullable=True)
-    comment: Mapped[str | None] = mapped_column(nullable=True)
+    unit: Mapped[str | None] = mapped_column(Text, nullable=True)
+    name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     unresolved: Mapped[bool] = mapped_column(
         nullable=False, 
         server_default=false(),
