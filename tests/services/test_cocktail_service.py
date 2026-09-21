@@ -1,5 +1,8 @@
-from contextlib import nullcontext
+# SQLAlchemy: результаты репозитория — ORM-объекты с отношением ingredients.
+from decimal import Decimal
+from unittest.mock import Mock
 
+from app.db.models import Cocktail, Ingredient
 from app.services import cocktail_service
 
 
@@ -23,7 +26,7 @@ INGREDIENT_ROW = {
     "id": 10,
     "position": 1,
     "raw": "50 ml gin",
-    "amount": "50",
+    "amount": Decimal("50"),
     "unit": "ml",
     "name": "Gin",
     "comment": None,
@@ -31,38 +34,28 @@ INGREDIENT_ROW = {
 }
 
 
-def use_fake_connection(monkeypatch):
-    connection = object()
-    monkeypatch.setattr(
-        cocktail_service, "get_connection", lambda: nullcontext(connection)
-    )
-    return connection
-
-
-def test_get_cocktail_page_calculates_offset_and_builds_models(monkeypatch):
-    connection = use_fake_connection(monkeypatch)
+def test_get_cocktail_page_calculates_offset_and_builds_models(monkeypatch, db_session):
     received = {}
 
-    def fake_summaries(conn, limit, offset):
-        received.update(conn=conn, limit=limit, offset=offset)
-        return [SUMMARY_ROW]
+    def fake_summaries(session, limit, offset):
+        received.update(session=session, limit=limit, offset=offset)
+        return [Cocktail(**SUMMARY_ROW)]
 
     monkeypatch.setattr(cocktail_service, "get_cocktail_summaries", fake_summaries)
-    monkeypatch.setattr(cocktail_service, "count_cocktails", lambda conn: 11)
+    monkeypatch.setattr(cocktail_service, "count_cocktails", lambda session: 11)
 
     result = cocktail_service.get_cocktail_page(page=2, page_size=5)
 
-    assert received == {"conn": connection, "limit": 5, "offset": 5}
+    assert received == {"session": db_session, "limit": 5, "offset": 5}
     assert result.items[0].name == "Gin Tonic"
     assert result.page == 2
     assert result.total == 11
     assert result.total_pages == 3
 
 
-def test_get_cocktail_page_returns_empty_page(monkeypatch):
-    use_fake_connection(monkeypatch)
+def test_get_cocktail_page_returns_empty_page(monkeypatch, db_session):
     monkeypatch.setattr(cocktail_service, "get_cocktail_summaries", lambda *args: [])
-    monkeypatch.setattr(cocktail_service, "count_cocktails", lambda conn: 7)
+    monkeypatch.setattr(cocktail_service, "count_cocktails", lambda session: 7)
 
     result = cocktail_service.get_cocktail_page(page=99, page_size=5)
 
@@ -71,15 +64,17 @@ def test_get_cocktail_page_returns_empty_page(monkeypatch):
     assert result.total_pages == 2
 
 
-def test_search_cocktails_normalizes_query_and_calculates_pagination(monkeypatch):
-    use_fake_connection(monkeypatch)
+def test_search_cocktails_normalizes_query_and_calculates_pagination(
+    monkeypatch, db_session
+):
     received = {}
 
-    def fake_search(conn, query, limit, offset):
-        received.update(query=query, limit=limit, offset=offset)
-        return [SUMMARY_ROW]
+    def fake_search(session, query, limit, offset):
+        received.update(session=session, query=query, limit=limit, offset=offset)
+        return [Cocktail(**SUMMARY_ROW)]
 
-    def fake_count(conn, query):
+    def fake_count(session, query):
+        received["count_session"] = session
         received["count_query"] = query
         return 6
 
@@ -91,6 +86,8 @@ def test_search_cocktails_normalizes_query_and_calculates_pagination(monkeypatch
     result = cocktail_service.search_cocktails("  gin   tonic  ", page=2, page_size=5)
 
     assert received == {
+        "session": db_session,
+        "count_session": db_session,
         "query": "gin tonic",
         "limit": 5,
         "offset": 5,
@@ -102,9 +99,9 @@ def test_search_cocktails_normalizes_query_and_calculates_pagination(monkeypatch
 
 def test_empty_cocktail_search_does_not_open_database(monkeypatch):
     def fail():
-        raise AssertionError("get_connection не должен вызываться")
+        raise AssertionError("SessionLocal не должен вызываться")
 
-    monkeypatch.setattr(cocktail_service, "get_connection", fail)
+    monkeypatch.setattr(cocktail_service, "SessionLocal", fail)
 
     result = cocktail_service.search_cocktails(" \t\n ", page=3, page_size=10)
 
@@ -117,31 +114,24 @@ def test_empty_cocktail_search_does_not_open_database(monkeypatch):
     }
 
 
-def test_get_cocktail_detail_keeps_none_and_skips_ingredients(monkeypatch):
-    use_fake_connection(monkeypatch)
-    monkeypatch.setattr(cocktail_service, "get_cocktail_by_id", lambda *args: None)
-
-    def fail(*args):
-        raise AssertionError("Ингредиенты отсутствующего коктейля запрашивать не нужно")
-
-    monkeypatch.setattr(cocktail_service, "get_ingredients_by_cocktail_id", fail)
+def test_get_cocktail_detail_returns_none(monkeypatch, db_session):
+    get_by_id = Mock(return_value=None)
+    monkeypatch.setattr(cocktail_service, "get_cocktail_by_id", get_by_id)
 
     assert cocktail_service.get_cocktail_detail(999) is None
+    get_by_id.assert_called_once_with(db_session, 999)
 
 
-def test_get_cocktail_detail_builds_nested_ingredients(monkeypatch):
-    use_fake_connection(monkeypatch)
-    monkeypatch.setattr(
-        cocktail_service, "get_cocktail_by_id", lambda conn, cocktail_id: DETAIL_ROW
+def test_get_cocktail_detail_builds_nested_ingredients(monkeypatch, db_session):
+    cocktail = Cocktail(
+        **DETAIL_ROW, ingredients=[Ingredient(**INGREDIENT_ROW)]
     )
-    monkeypatch.setattr(
-        cocktail_service,
-        "get_ingredients_by_cocktail_id",
-        lambda conn, cocktail_id: [INGREDIENT_ROW],
-    )
+    get_by_id = Mock(return_value=cocktail)
+    monkeypatch.setattr(cocktail_service, "get_cocktail_by_id", get_by_id)
 
     result = cocktail_service.get_cocktail_detail(1)
 
+    get_by_id.assert_called_once_with(db_session, 1)
     assert result is not None
     assert result.id == 1
     assert len(result.ingredients) == 1

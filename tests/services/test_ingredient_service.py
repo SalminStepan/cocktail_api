@@ -1,20 +1,18 @@
-from contextlib import nullcontext
+# SQLAlchemy: агрегатные строки имеют атрибуты name и cocktail_count.
+from types import SimpleNamespace
 
 from app.services import ingredient_service
 
 
-def test_search_ingredients_normalizes_query_and_builds_page(monkeypatch):
-    connection = object()
-    monkeypatch.setattr(
-        ingredient_service, "get_connection", lambda: nullcontext(connection)
-    )
+def test_search_ingredients_normalizes_query_and_builds_page(monkeypatch, db_session):
     received = {}
 
-    def fake_search(conn, query, limit, offset):
-        received.update(conn=conn, query=query, limit=limit, offset=offset)
-        return [{"name": "London Dry Gin", "cocktail_count": 4}]
+    def fake_search(session, query, limit, offset):
+        received.update(session=session, query=query, limit=limit, offset=offset)
+        return [SimpleNamespace(name="London Dry Gin", cocktail_count=4)]
 
-    def fake_count(conn, query):
+    def fake_count(session, query):
+        received["count_session"] = session
         received["count_query"] = query
         return 11
 
@@ -28,7 +26,8 @@ def test_search_ingredients_normalizes_query_and_builds_page(monkeypatch):
     )
 
     assert received == {
-        "conn": connection,
+        "session": db_session,
+        "count_session": db_session,
         "query": "london dry",
         "limit": 5,
         "offset": 5,
@@ -44,7 +43,7 @@ def test_empty_ingredient_search_does_not_call_repository(monkeypatch):
     def fail(*args):
         raise AssertionError("БД и repository не должны вызываться")
 
-    monkeypatch.setattr(ingredient_service, "get_connection", fail)
+    monkeypatch.setattr(ingredient_service, "SessionLocal", fail)
     monkeypatch.setattr(ingredient_service, "search_ingredient_names", fail)
     monkeypatch.setattr(ingredient_service, "count_ingredient_search_results", fail)
 
@@ -59,10 +58,7 @@ def test_empty_ingredient_search_does_not_call_repository(monkeypatch):
     }
 
 
-def test_search_ingredients_returns_empty_page_with_total(monkeypatch):
-    monkeypatch.setattr(
-        ingredient_service, "get_connection", lambda: nullcontext(object())
-    )
+def test_search_ingredients_returns_empty_page_with_total(monkeypatch, db_session):
     monkeypatch.setattr(ingredient_service, "search_ingredient_names", lambda *args: [])
     monkeypatch.setattr(
         ingredient_service, "count_ingredient_search_results", lambda *args: 8

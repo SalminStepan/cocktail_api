@@ -117,7 +117,7 @@ def test_cocktail_search_handles_whitespace_query(client, monkeypatch):
         raise AssertionError("Для пустого поиска соединение с БД не нужно")
 
     monkeypatch.setattr(
-        "app.services.cocktail_service.get_connection", database_must_not_be_opened
+        "app.services.cocktail_service.SessionLocal", database_must_not_be_opened
     )
 
     response = client.get("/cocktails/search", params={"q": "   "})

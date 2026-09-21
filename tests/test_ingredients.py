@@ -59,7 +59,7 @@ def test_ingredient_search_handles_whitespace(client, monkeypatch):
         raise AssertionError("Для пустого поиска соединение с БД не нужно")
 
     monkeypatch.setattr(
-        "app.services.ingredient_service.get_connection", database_must_not_be_opened
+        "app.services.ingredient_service.SessionLocal", database_must_not_be_opened
     )
 
     response = client.get("/ingredients/search", params={"q": "  "})

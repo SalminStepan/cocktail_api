@@ -1,21 +1,26 @@
 import pytest
+from sqlalchemy.exc import OperationalError
 
 from app.exceptions import DatabaseUnavailableError
 
 
 CASES = [
-    ("/health/db", "app.main.check_database_connection"),
-    ("/cocktails", "app.routers.cocktails.get_cocktail_page"),
-    ("/cocktails/search?q=gin", "app.routers.cocktails.search_cocktails"),
-    ("/cocktails/36843", "app.routers.cocktails.get_cocktail_detail"),
-    ("/ingredients/search?q=gin", "app.routers.ingredients.search_ingredients"),
-    ("/stats", "app.routers.stats.get_stats"),
+    ("/cocktails", "app.services.cocktail_service.SessionLocal"),
+    ("/cocktails/search?q=gin", "app.services.cocktail_service.SessionLocal"),
+    ("/cocktails/36843", "app.services.cocktail_service.SessionLocal"),
+    ("/cocktails/by-name?name=Gin", "app.services.cocktail_service.SessionLocal"),
+    ("/ingredients/search?q=gin", "app.services.ingredient_service.SessionLocal"),
+    ("/stats", "app.services.stats_service.SessionLocal"),
 ]
 
 
 def raise_database_error(*args, **kwargs):
-    raise DatabaseUnavailableError(
-        "psycopg: connection refused at 127.0.0.1; DB_USER and DB_PASSWORD"
+    raise OperationalError(
+        "SELECT 1",
+        {},
+        RuntimeError(
+            "sqlalchemy: connection refused at 127.0.0.1; DB_USER and DB_PASSWORD"
+        ),
     )
 
 
@@ -38,7 +43,8 @@ def test_database_error_does_not_expose_internal_details(
     response_text = client.get(url).text.lower()
 
     for secret in (
-        "psycopg",
+        "sqlalchemy",
+        "select 1",
         "localhost",
         "127.0.0.1",
         "db_user",
@@ -46,3 +52,15 @@ def test_database_error_does_not_expose_internal_details(
         "connection refused",
     ):
         assert secret not in response_text
+
+
+def test_legacy_database_error_returns_503(client, monkeypatch):
+    def unavailable():
+        raise DatabaseUnavailableError("secret connection details")
+
+    monkeypatch.setattr("app.routers.stats.get_stats", unavailable)
+
+    response = client.get("/stats")
+
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Database unavailable"}
