@@ -1,11 +1,13 @@
 from app.schemas.stats import DatasetStats, ParseStatusStats, ImageStats
-from app.db.connection import get_connection
 from app.repositories.stats_repository import get_dataset_stats
+from app.db.session import SessionLocal
 
 
 def get_stats() -> DatasetStats:
-    with get_connection() as conn:
-        rows = get_dataset_stats(conn)
+    with SessionLocal() as session:
+
+        rows = get_dataset_stats(session)
+
         parse_stats = ParseStatusStats(
             ok = rows["parse_ok"],
             partial = rows["parse_partial"],
@@ -23,5 +25,5 @@ def get_stats() -> DatasetStats:
             unresolved_ingredients = rows["unresolved_ingredients"],
             images = image_stats
         )
+
         return dataset_stats
-    

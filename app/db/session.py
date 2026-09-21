@@ -1,5 +1,6 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
 
@@ -19,3 +20,10 @@ SessionLocal = sessionmaker(
     autocommit=False,
 )
 
+def check_database_connection() -> bool:
+    try:
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT 1")).scalar_one()
+            return result == 1
+    except SQLAlchemyError:
+        return False

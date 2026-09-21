@@ -1,44 +1,51 @@
-def get_dataset_stats(conn) -> dict:
-    with conn.cursor() as cur:
-        cur.execute("""
-            WITH cocktail_stats AS (
-                SELECT
-                    COUNT(*) AS cocktails_total,
-                    COUNT(*) FILTER (
-                        WHERE parse_status = 'ok'
-                    ) AS parse_ok,
-                    COUNT(*) FILTER (
-                        WHERE parse_status = 'partial'
-                    ) AS parse_partial,
-                    COUNT(*) FILTER (
-                        WHERE parse_status = 'failed'
-                    ) AS parse_failed,
-                    COUNT(*) FILTER (
-                        WHERE image_url IS NOT NULL
-                    ) AS cocktails_with_image,
-                    COUNT(*) FILTER (
-                        WHERE image_url IS NULL
-                    ) AS cocktails_without_image
-                FROM cocktails
-            ),
-            ingredient_stats AS (
-                SELECT
-                    COUNT(*) AS ingredients_total,
-                    COUNT(*) FILTER (
-                        WHERE unresolved = true
-                    ) AS unresolved_ingredients
-                FROM ingredients
-            )
-            SELECT
-                cocktail_stats.cocktails_total,
-                ingredient_stats.ingredients_total,
-                cocktail_stats.parse_ok,
-                cocktail_stats.parse_partial,
-                cocktail_stats.parse_failed,
-                ingredient_stats.unresolved_ingredients,
-                cocktail_stats.cocktails_with_image,
-                cocktail_stats.cocktails_without_image
-            FROM cocktail_stats
-            CROSS JOIN ingredient_stats;""")
-        stats = cur.fetchone()
-        return stats
+from sqlalchemy import (
+    select,
+    func,
+)
+from sqlalchemy.orm import Session
+
+from app.db.models import Cocktail, Ingredient
+
+
+def get_dataset_stats(session: Session) -> dict:
+    cocktail_stmt = select(
+        func.count().label("cocktails_total"),
+
+        func.count()
+        .filter(Cocktail.parse_status == "ok")
+        .label("parse_ok"),
+
+        func.count()
+        .filter(Cocktail.parse_status == "partial")
+        .label("parse_partial"),
+
+        func.count()
+        .filter(Cocktail.parse_status  == "failed")
+        .label("parse_failed"),
+
+        func.count()
+        .filter(Cocktail.image_url.is_not(None))
+        .label("cocktails_with_image"),
+
+        func.count()
+        .filter(Cocktail.image_url.is_(None))
+        .label("cocktails_without_image"),
+        
+    ).select_from(Cocktail)
+
+    ingredient_stmt = select(
+        func.count().label("ingredients_total"),
+
+        func.count()
+        .filter(Ingredient.unresolved.is_(True))
+        .label("unresolved_ingredients"),
+    ).select_from(Ingredient)
+
+    cocktail_stats = session.execute(cocktail_stmt).mappings().one()
+    ingredient_stats = session.execute(ingredient_stmt).mappings().one()
+
+    stats = {
+    **cocktail_stats,
+    **ingredient_stats,
+    }
+    return stats

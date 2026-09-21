@@ -2,10 +2,10 @@ from fastapi import APIRouter, Query
 from fastapi import HTTPException
 
 from app.services.cocktail_service import (
-    get_cocktail_page_orm, 
-    get_cocktail_detail_orm, 
-    search_cocktails_orm,
-    get_cocktail_detail_by_name
+    get_cocktail_page, 
+    get_cocktail_detail, 
+    search_cocktails,
+    get_cocktail_detail_by_name,
 )
 from app.schemas.cocktail import CocktailPage
 from app.schemas.ingredient import CocktailDetail
@@ -18,7 +18,7 @@ def list_cocktails(
     page: int = Query(default=1, ge = 1),
     page_size: int = Query(default = 20, ge = 1, le = 100)
 ) -> CocktailPage:
-    cocktails = get_cocktail_page_orm(page, page_size)
+    cocktails = get_cocktail_page(page, page_size)
     return cocktails
 
 @cocktails_router.get("/cocktails/search")
@@ -27,7 +27,7 @@ def search_cocktails_endpoint(
     page: int = Query(default=1, ge = 1),
     page_size: int = Query(default = 20, ge = 1, le = 100)
 ) -> CocktailPage:
-    cocktails = search_cocktails_orm(q, page, page_size)
+    cocktails = search_cocktails(q, page, page_size)
     return cocktails
 
 @cocktails_router.get("/cocktails/by-name")
@@ -46,7 +46,7 @@ def get_cocktail_by_name_endpoint(
     
 @cocktails_router.get("/cocktails/{cocktail_id}")
 def get_cocktail(cocktail_id: int) -> CocktailDetail:
-    cocktail = get_cocktail_detail_orm(cocktail_id)
+    cocktail = get_cocktail_detail(cocktail_id)
 
     if cocktail is None:
         raise HTTPException(status_code=404, detail="Cocktail not found")

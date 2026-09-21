@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from app.schemas.stats import DatasetStats
 from app.services.stats_service import get_stats
 

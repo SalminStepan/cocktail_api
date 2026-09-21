@@ -2,11 +2,12 @@ import logging
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from app.db.connection import check_database_connection
+from app.db.session import check_database_connection
 from app.routers.cocktails import cocktails_router
 from app.routers.ingredients import ingredients_router
 from app.routers.stats import stats_router
 from app.exceptions import DatabaseUnavailableError
+
 
 
 logging.basicConfig(
